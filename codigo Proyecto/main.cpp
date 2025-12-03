@@ -4,7 +4,7 @@ using namespace std;
 
 int main() {
     int opcionMenu = 0;
-
+cout <<"hola";
     cout << "1) Nuevo juego\n";
     cout << "2) Salir\n";
     cout << "Elige opcion: ";
