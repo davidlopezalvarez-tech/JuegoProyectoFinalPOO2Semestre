@@ -3,12 +3,16 @@
 #include <iostream>
 using namespace std;
 
-Juego::Juego(int dificultad) {
+Juego::Juego(int dificultad, int numJugadores) {
     this->dificultad = dificultad;
-    numJugadores = 4;
-    jugadores = new Jugador*[numJugadores];
 
-    // Elegir tamaño de tablero y PV inicial segun el pdf. [file:2]
+    if (numJugadores < 1) numJugadores = 1;
+    if (numJugadores > 4) numJugadores = 4;
+    this->numJugadores = numJugadores;
+
+    jugadores = new Jugador*[this->numJugadores];
+
+    // Tamaño de tablero y PV inicial segun dificultad.
     if (dificultad == 1) {        // Facil
         tamanoTablero = 15;
         pvInicial = 15;
@@ -20,24 +24,30 @@ Juego::Juego(int dificultad) {
         pvInicial = 31;
     }
 
-    // Crear 4 jugadores con PV inicial; la posicion real se asigna en Tablero. [file:2][file:63]
-    for (int i = 0; i < numJugadores; i++) {
+    // Crear jugadores con PV inicial; posicion real se fija en Tablero.
+    for (int i = 0; i < this->numJugadores; i++) {
         jugadores[i] = new Jugador(i + 1, pvInicial, 0, 0);
     }
 
-    // Crear el tablero y asociarle los jugadores.
-    tablero = new Tablero(tamanoTablero, jugadores, numJugadores);
+    tablero = new Tablero(tamanoTablero, jugadores, this->numJugadores);
     jugadorActual = 0;
 }
 
+int Juego::getDificultad()    { return dificultad; }
+int Juego::getPVInicial()     { return pvInicial; }
+int Juego::getNumJugadores()  { return numJugadores; }
+int Juego::getJugadorActual() { return jugadorActual; }
+Jugador** Juego::getJugadores(){ return jugadores; }
+Tablero* Juego::getTablero()  { return tablero; }
+
 void Juego::iniciarPartida() {
-    // Generar un ~8% de casillas especiales (rango sugerido 6–10%). [file:2]
+    // 8% de casillas especiales (rango 6–10%).
     tablero->generarEspeciales(8);
-    // Colocar a los 4 jugadores en las esquinas. [file:2]
     tablero->colocarJugadores();
 
     cout << "Tablero creado de tamano " << tablero->getTamano()
-         << ", PV inicial " << pvInicial << endl;
+         << ", PV inicial " << pvInicial
+         << ", jugadores: " << numJugadores << endl;
 
     tablero->dibujarTablero();
     mostrarEstado();
@@ -50,11 +60,15 @@ void Juego::mostrarEstado() {
         int col  = jugadores[i]->getColumna();
         cout << "Jugador " << jugadores[i]->getId()
              << " -> PV: " << jugadores[i]->getVidaActual()
-             << " Posicion: (" << fila << ", " << col << ")\n";
+             << " Posicion: (" << fila << ", " << col << ")";
+        if (jugadores[i]->estaEliminado()) {
+            cout << " [ELIMINADO]";
+        }
+        cout << "\n";
     }
 }
 
-// Esquina: 2 dados; borde: 3; interior: 4, segun el pdf. [file:2]
+// Se mantiene por si lo requiere el enunciado, aunque ya no controla las direcciones.
 int Juego::calcularNumDados(int fila, int col) {
     if (tablero->estaEnEsquina(fila, col)) {
         return 2;
@@ -65,55 +79,49 @@ int Juego::calcularNumDados(int fila, int col) {
     }
 }
 
-// Mueve al jugador paso a paso, restando 1 PV por casilla recorrida. [file:2]
-bool Juego::moverJugador(int indiceJugador, int dirFila, int dirCol, int pasos) {
+// Mueve una sola casilla en la direccion indicada y descuenta 1 PV.
+bool Juego::moverJugadorUnaCasilla(int indiceJugador, int dirFila, int dirCol) {
     Jugador* j = jugadores[indiceJugador];
 
     int fila = j->getFila();
     int col  = j->getColumna();
 
-    for (int k = 0; k < pasos; k++) {
-        int nuevaFila = fila + dirFila;
-        int nuevaCol  = col  + dirCol;
+    int nuevaFila = fila + dirFila;
+    int nuevaCol  = col  + dirCol;
 
-        if (!tablero->validarPosicion(nuevaFila, nuevaCol)) {
-            // No se permite salir del tablero. [file:2]
-            cout << "Movimiento detenido: se saldria del tablero.\n";
-            return false;
-        }
+    if (!tablero->validarPosicion(nuevaFila, nuevaCol)) {
+        cout << "Movimiento cancelado: se saldria del tablero.\n";
+        return false;
+    }
 
-        fila = nuevaFila;
-        col  = nuevaCol;
-        j->setPosicion(fila, col);
+    j->setPosicion(nuevaFila, nuevaCol);
 
-        // Cada casilla recorrida cuesta 1 PV. [file:2]
-        int vida = j->getVidaActual();
-        j->setVida(vida - 1);
+    int vida = j->getVidaActual();
+    j->setVida(vida - 1);   // un paso, un PV
 
-        if (j->estaEliminado()) {
-            cout << "Jugador " << j->getId()
-                 << " ha sido eliminado por llegar a 0 PV.\n";
-            return false;
-        }
+    if (j->estaEliminado()) {
+        cout << "Jugador " << j->getId()
+             << " ha sido eliminado por llegar a 0 PV.\n";
+        return false;
     }
 
     cout << "Jugador " << j->getId()
-         << " se movio a (" << fila << ", " << col << ")\n";
+         << " se movio a (" << nuevaFila << ", " << nuevaCol << ")\n";
 
-    // Si llega exactamente a la casilla central, gana. [file:2]
-    if (tablero->meta(fila, col)) {
+    // Si llega exactamente a la casilla central, gana.
+    if (tablero->meta(nuevaFila, nuevaCol)) {
         cout << "Jugador " << j->getId()
              << " ha llegado a la meta y gana la partida.\n";
-        // Aqui luego podrias marcar fin de juego.
+        // Aqui luego podrias marcar fin de juego global.
     }
 
-    // Aplicar efecto de casilla especial si corresponde. [file:2]
+    // Aplicar efecto de casilla especial si corresponde.
     aplicarCasillaEspecial(indiceJugador);
 
     return true;
 }
 
-// Aplica las reglas de casillas especiales (castigo o recompensa). [file:2]
+// Aplicar reglas de casillas especiales (castigo / recompensa).
 void Juego::aplicarCasillaEspecial(int indiceJugador) {
     Jugador* j = jugadores[indiceJugador];
     int fila = j->getFila();
@@ -123,15 +131,19 @@ void Juego::aplicarCasillaEspecial(int indiceJugador) {
     CasillaEspecial* ce = dynamic_cast<CasillaEspecial*>(c);
 
     if (ce == nullptr) {
-        return; // No es casilla especial.
+        return;
     }
 
     cout << "Jugador " << j->getId() << " ha caido en una casilla especial.\n";
 
-    int d = dado.lanzar(pvInicial); // valor entre 1 y PV inicial. [file:2][file:66]
+    // Limite del dado: max(pvInicial, vidaActual), minimo 1
+    int vidaActual = j->getVidaActual();
+    int limiteDado = (vidaActual > pvInicial) ? vidaActual : pvInicial;
+    if (limiteDado < 1) limiteDado = 1;
+    int d = dado.lanzar(limiteDado);
     cout << "Valor del dado especial: " << d << endl;
 
-    // Si la casilla aun no se conocia, decidir al azar si es castigo o recompensa. [file:2]
+    // Si aun no se conocia, decidir al azar castigo o recompensa.
     if (!ce->getConocida()) {
         int tipoRandom = dado.lanzar(2); // 1 o 2
         if (tipoRandom == 1) {
@@ -143,12 +155,12 @@ void Juego::aplicarCasillaEspecial(int indiceJugador) {
     }
 
     if (ce->getTipo() < 0) {
-        // Castigo: restar d PV al jugador que cayo. [file:2]
+        // Castigo: restar d PV al que cayo.
         ce->castigar(j, d);
         cout << "Casilla de castigo: -" << d
              << " PV al jugador " << j->getId() << endl;
     } else {
-        // Recompensa: elegir entre dañar a los demas o curarse. [file:2]
+        // Recompensa: elegir opcion.
         int opcion;
         cout << "Casilla de recompensa:\n";
         cout << "1) Restar " << d << " PV a los demas jugadores\n";
@@ -168,7 +180,7 @@ void Juego::aplicarCasillaEspecial(int indiceJugador) {
     }
 }
 
-// Un turno completo del jugadorActual, siguiendo reglas 5.1 y 5.2. [file:2]
+// Turno completo: direcciones posibles por tablero, validas si PV > dado y dentro.
 void Juego::turnoJugador() {
     Jugador* j = jugadores[jugadorActual];
 
@@ -186,34 +198,66 @@ void Juego::turnoJugador() {
     cout << "PV actuales: " << j->getVidaActual()
          << " Posicion: (" << fila << ", " << col << ")\n";
 
-    int numDados = calcularNumDados(fila, col);
-    cout << "Se lanzan " << numDados << " dados.\n";
+    // Direcciones: 0=Arriba,1=Abajo,2=Izquierda,3=Derecha.
+    int dirFila[4]        = {-1, 1, 0, 0};
+    int dirCol[4]         = {0, 0, -1, 1};
+    const char* nombre[4] = {"Arriba", "Abajo", "Izquierda", "Derecha"};
 
-    // Direcciones en orden: 0=Arriba,1=Abajo,2=Izquierda,3=Derecha. [file:2]
-    int dirFila[4] = {-1, 1, 0, 0};
-    int dirCol[4]  = {0, 0, -1, 1};
-    const char* nombreDir[4] = {"Arriba", "Abajo", "Izquierda", "Derecha"};
+    int valores[4]          = {0, 0, 0, 0};
+    bool direccionDentro[4] = {false, false, false, false};
+    bool valida[4]          = {false, false, false, false};
 
-    int valores[4] = {0, 0, 0, 0};
-    bool valida[4] = {false, false, false, false};
+    // Primero: ver qué direcciones NO se salen (1 casilla).
+    for (int i = 0; i < 4; i++) {
+        int nuevaFila = fila + dirFila[i];
+        int nuevaCol  = col  + dirCol[i];
+        direccionDentro[i] = tablero->validarPosicion(nuevaFila, nuevaCol);
+    }
 
-    // Lanzar dados y verificar direcciones validas (d <= PV actual y no salir). [file:2]
-    for (int i = 0; i < numDados; i++) {
-        valores[i] = dado.lanzar(pvInicial);
+    // Lanzar dados solo para direcciones que están dentro.
+    cout << "Se lanzan dados para las direcciones posibles.\n";
+    for (int i = 0; i < 4; i++) {
+        if (!direccionDentro[i]) {
+            continue; // ni siquiera se considera esta direccion
+        }
 
-        int nuevaFila = fila + dirFila[i] * valores[i];
-        int nuevaCol  = col  + dirCol[i] * valores[i];
+        int vidaActual = j->getVidaActual();
+        int limiteDado = (vidaActual > pvInicial) ? vidaActual : pvInicial;
+        if (limiteDado < 1) limiteDado = 1;
 
-        if (valores[i] <= j->getVidaActual() &&
-            tablero->validarPosicion(nuevaFila, nuevaCol)) {
+        valores[i] = dado.lanzar(limiteDado);
+
+        // Tu regla: direccion valida si PV actual > valor del dado
+        bool reglaPV = (j->getVidaActual() > valores[i]);
+
+        if (reglaPV) {
             valida[i] = true;
+        } else {
+            valida[i] = false;
         }
     }
 
-    // Contar direcciones validas. [file:2]
+    cout << "Resultados de los dados y validez de direcciones:\n";
+    for (int i = 0; i < 4; i++) {
+        if (!direccionDentro[i]) {
+            cout << i << ") " << nombre[i]
+                 << " -> NO es posible moverse en esta direccion (fuera del tablero).\n";
+            continue;
+        }
+
+        cout << i << ") " << nombre[i]
+             << " - dado = " << valores[i] << " -> ";
+        if (valida[i]) {
+            cout << "MOVIMIENTO VALIDO\n";
+        } else {
+            cout << "NO es posible moverse en esta direccion (PV <= dado).\n";
+        }
+    }
+
+    // Contar direcciones validas.
     int cuentaValidas = 0;
     int ultimaValida = -1;
-    for (int i = 0; i < numDados; i++) {
+    for (int i = 0; i < 4; i++) {
         if (valida[i]) {
             cuentaValidas++;
             ultimaValida = i;
@@ -229,33 +273,35 @@ void Juego::turnoJugador() {
     int eleccion = ultimaValida;
 
     if (cuentaValidas > 1) {
-        cout << "Direcciones validas:\n";
-        for (int i = 0; i < numDados; i++) {
+        cout << "Elige una direccion valida:\n";
+        for (int i = 0; i < 4; i++) {
             if (valida[i]) {
-                cout << i << ") " << nombreDir[i]
-                     << " con " << valores[i] << " casillas\n";
+                cout << i << ") " << nombre[i]
+                     << " (dado = " << valores[i] << ")\n";
             }
         }
-        cout << "Elige direccion: ";
+        cout << "Opcion: ";
         cin >> eleccion;
-        if (eleccion < 0 || eleccion >= numDados || !valida[eleccion]) {
+        if (eleccion < 0 || eleccion >= 4 || !valida[eleccion]) {
             cout << "Opcion invalida, se anula el turno.\n";
             jugadorActual = (jugadorActual + 1) % numJugadores;
             return;
         }
     } else {
         cout << "Solo hay una direccion valida: "
-             << nombreDir[ultimaValida]
-             << " con " << valores[ultimaValida]
-             << " casillas (movimiento automatico).\n";
+             << nombre[ultimaValida]
+             << " (dado = " << valores[ultimaValida]
+             << "). Movimiento automatico.\n";
     }
 
-    moverJugador(jugadorActual,
-                 dirFila[eleccion], dirCol[eleccion],
-                 valores[eleccion]);
+    // Mover siempre UNA casilla en la direccion elegida.
+    moverJugadorUnaCasilla(jugadorActual,
+                           dirFila[eleccion], dirCol[eleccion]);
 
+    // Mostrar tablero y estado despues del movimiento.
+    tablero->dibujarTablero();
     mostrarEstado();
 
-    // Pasar al siguiente jugador en orden fijo. [file:2]
+    // Pasar al siguiente jugador en orden fijo.
     jugadorActual = (jugadorActual + 1) % numJugadores;
 }

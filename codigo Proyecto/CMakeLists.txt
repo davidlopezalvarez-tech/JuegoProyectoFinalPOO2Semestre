@@ -17,4 +17,6 @@ add_executable(codigo_Proyecto main.cpp
         Dado.cpp
         Dado.h
         Tablero.cpp
-        Tablero.h)
+        Tablero.h
+        GestorPartida.cpp
+        GestorPartida.h)

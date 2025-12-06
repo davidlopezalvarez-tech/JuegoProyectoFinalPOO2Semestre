@@ -1,11 +1,12 @@
 //
 // Created by aleji on 2/12/2025.
 //
-
 // Tablero.cpp
 #include "Tablero.h"
 #include <iostream>
-#include <cstdlib>  // rand
+#include <cstdlib>   // rand
+#include <ctime>     // time
+
 using namespace std;
 
 Tablero::Tablero(int tamano, Jugador** jugadores, int numJugadores) {
@@ -14,12 +15,15 @@ Tablero::Tablero(int tamano, Jugador** jugadores, int numJugadores) {
     this->lugarJugador = jugadores;
     numEspeciales = 0;
 
+    // inicializar semilla para rand (si no lo hace otra clase)
+    std::srand(std::time(nullptr));
+
     // Reservar matriz [tamano][tamano] de punteros a Casilla
     tablero = new Casilla**[tamano];
     for (int i = 0; i < tamano; i++) {
         tablero[i] = new Casilla*[tamano];
         for (int j = 0; j < tamano; j++) {
-            tablero[i][j] = new CasillaNormal(i, j);  // todo normal al inicio
+            tablero[i][j] = new CasillaNormal(i, j); // todo normal al inicio
         }
     }
 }
@@ -54,13 +58,13 @@ bool Tablero::estaEnEsquina(int fila, int columna) {
 }
 
 bool Tablero::meta(int fila, int columna) {
-    // Centro del tablero (tamaños 15, 23, 31 → índice tamano/2) [file:2]
+    // Centro del tablero (tamaños 15, 23, 31 -> índice tamano/2)
     int centro = tamano / 2;
     return fila == centro && columna == centro;
 }
 
 void Tablero::generarEspeciales(int porcentaje) {
-    // porcentaje recomendado 6–10 según el enunciado [file:2]
+    // porcentaje recomendado 6–10 según el enunciado
     int totalCasillas = tamano * tamano;
     int cantidad = totalCasillas * porcentaje / 100;
 
@@ -69,13 +73,15 @@ void Tablero::generarEspeciales(int porcentaje) {
         int fila = rand() % tamano;
         int col  = rand() % tamano;
 
-        // si ya es especial, saltar
-        if (dynamic_cast<CasillaEspecial*>(tablero[fila][col]) != nullptr) {
+        // evitar esquinas y meta
+        if (estaEnEsquina(fila, col) || meta(fila, col)) {
             continue;
         }
 
-        // opcional: evitar marcar la casilla meta como especial
-        if (meta(fila, col)) {
+        // si ya es especial, saltar
+        CasillaEspecial* existeEspecial =
+                dynamic_cast<CasillaEspecial*>(tablero[fila][col]);
+        if (existeEspecial != nullptr) {
             continue;
         }
 
@@ -87,31 +93,104 @@ void Tablero::generarEspeciales(int porcentaje) {
 }
 
 void Tablero::colocarJugadores() {
-    // Coloca hasta 4 jugadores en las esquinas como dice el pdf [file:2]
-    if (numJugadores > 0 && lugarJugador[0] != nullptr) {
-        lugarJugador[0]->setPosicion(0, 0);                     // arriba izquierda
+    // Lista de las 4 esquinas
+    int esquinasFila[4]    = {0, 0, tamano - 1, tamano - 1};
+    int esquinasColumna[4] = {0, tamano - 1, tamano - 1, 0};
+
+    // Desordenar las esquinas de forma aleatoria (Fisher–Yates sencillo)
+    for (int i = 3; i > 0; i--) {
+        int j = rand() % (i + 1);
+        int tmpF = esquinasFila[i];
+        int tmpC = esquinasColumna[i];
+        esquinasFila[i]    = esquinasFila[j];
+        esquinasColumna[i] = esquinasColumna[j];
+        esquinasFila[j]    = tmpF;
+        esquinasColumna[j] = tmpC;
     }
-    if (numJugadores > 1 && lugarJugador[1] != nullptr) {
-        lugarJugador[1]->setPosicion(0, tamano - 1);            // arriba derecha
+
+    // Asignar una esquina distinta a cada jugador existente
+    int limite = numJugadores;
+    if (limite > 4) {
+        limite = 4;
     }
-    if (numJugadores > 2 && lugarJugador[2] != nullptr) {
-        lugarJugador[2]->setPosicion(tamano - 1, tamano - 1);   // abajo derecha
-    }
-    if (numJugadores > 3 && lugarJugador[3] != nullptr) {
-        lugarJugador[3]->setPosicion(tamano - 1, 0);            // abajo izquierda
+
+    for (int i = 0; i < limite; i++) {
+        if (lugarJugador[i] != nullptr) {
+            int f = esquinasFila[i];
+            int c = esquinasColumna[i];
+            lugarJugador[i]->setPosicion(f, c);
+        }
     }
 }
 
+void Tablero::setCasilla(int fila, int columna, Casilla* nuevaCasilla) {
+    if (!validarPosicion(fila, columna)) return;
+    delete tablero[fila][columna];
+    tablero[fila][columna] = nuevaCasilla;
+}
+
 void Tablero::dibujarTablero() {
-    // Versión de texto: N = normal, E = especial
+    // matriz temporal de chars
+    char** vista = new char*[tamano];
+    for (int i = 0; i < tamano; i++) {
+        vista[i] = new char[tamano];
+        for (int j = 0; j < tamano; j++) {
+            vista[i][j] = ' '; // base vacía
+        }
+    }
+
+    // Marcar meta
+    int centro = tamano / 2;
+    vista[centro][centro] = 'M';
+
+    // Casillas especiales
     for (int i = 0; i < tamano; i++) {
         for (int j = 0; j < tamano; j++) {
-            if (dynamic_cast<CasillaEspecial*>(tablero[i][j]) != nullptr) {
-                cout << "E ";
-            } else {
-                cout << "N ";
+            CasillaEspecial* ce = dynamic_cast<CasillaEspecial*>(tablero[i][j]);
+            if (ce != nullptr) {
+                if (!ce->getConocida()) {
+                    vista[i][j] = '?';
+                } else {
+                    if (ce->getTipo() < 0) {
+                        vista[i][j] = 'C'; // castigo
+                    } else if (ce->getTipo() > 0) {
+                        vista[i][j] = 'R'; // recompensa
+                    } else {
+                        vista[i][j] = '?';
+                    }
+                }
             }
+        }
+    }
+
+    // Colocar jugadores (1..4), sobreescribiendo lo que hubiera debajo
+    int limite = numJugadores;
+    if (limite > 4) {
+        limite = 4;
+    }
+
+    for (int i = 0; i < limite; i++) {
+        if (lugarJugador[i] != nullptr && !lugarJugador[i]->estaEliminado()) {
+            int f = lugarJugador[i]->getFila();
+            int c = lugarJugador[i]->getColumna();
+            if (validarPosicion(f, c)) {
+                char simbolo = '1' + i; // '1','2','3','4'
+                vista[f][c] = simbolo;
+            }
+        }
+    }
+
+    // Mostrar en consola con llaves
+    cout << "\nTablero:\n";
+    for (int i = 0; i < tamano; i++) {
+        for (int j = 0; j < tamano; j++) {
+            cout << "[" << vista[i][j] << "]";
         }
         cout << endl;
     }
+
+    for (int i = 0; i < tamano; i++) {
+        delete[] vista[i];
+    }
+    delete[] vista;
 }

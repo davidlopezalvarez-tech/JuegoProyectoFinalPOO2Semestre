@@ -1,7 +1,7 @@
 //
 // Created by aleji on 2/12/2025.
 //
-// Tablero.h
+
 #ifndef PROYECTO_FINAL_TABLERO_H
 #define PROYECTO_FINAL_TABLERO_H
 
@@ -15,7 +15,7 @@ private:
     int tamano;
     int numEspeciales;
     Casilla*** tablero;      // matriz [fila][columna] de punteros a Casilla
-    Jugador** lugarJugador;  // verifica el lugar del jugador (fila, columna)
+    Jugador** lugarJugador;  // arreglo de punteros a jugadores
     int numJugadores;
 
 public:
@@ -24,13 +24,17 @@ public:
     int getTamano();
     Casilla* getCasilla(int fila, int columna);
 
-    void dibujarTablero();
-    void generarEspeciales(int porcentaje); // para el porcentaje de 6 a 10% de especiales
-    void colocarJugadores();             // pone los jugadores en las 4 esquinas
+    void dibujarTablero();                    // muestra vacias, especiales, meta y jugadores
+    void generarEspeciales(int porcentaje);   // 6–10% de especiales, sin esquinas ni meta
+    void colocarJugadores();                  // jugadores en esquinas aleatorias
+
     bool validarPosicion(int fila, int columna);
     bool estaEnLimite(int fila, int columna);
     bool estaEnEsquina(int fila, int columna);
-    bool meta(int fila, int columna);
+    bool meta(int fila, int columna);         // casilla central
+
+    // NUEVO: para que GestorPartida pueda reconstruir casillas al cargar
+    void setCasilla(int fila, int columna, Casilla* nuevaCasilla);
 };
 
 #endif //PROYECTO_FINAL_TABLERO_H
