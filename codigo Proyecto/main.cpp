@@ -5,6 +5,7 @@
 using namespace std;
 
 int main() {
+    cout<< "yoyoyo"<< endl;
     GestorPartida gestor;
     Juego* juego = nullptr;
     int opcionMenuPrincipal = 0;
