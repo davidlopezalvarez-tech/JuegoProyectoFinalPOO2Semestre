@@ -5,6 +5,7 @@
 using namespace std;
 
 int main() {
+    cout<< "Terminado, Faltan Correciones"<< endl;
     GestorPartida gestor;
     Juego* juego = nullptr;
     int opcionMenuPrincipal = 0;
