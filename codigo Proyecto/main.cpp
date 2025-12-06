@@ -1,7 +1,7 @@
 #include <iostream>
 #include "Juego.h"
 #include "GestorPartida.h"
-
+///Actualizado
 using namespace std;
 
 int main() {
