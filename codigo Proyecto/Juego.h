@@ -13,14 +13,14 @@ private:
     int pvInicial;       // PV inicial por jugador, segun dificultad
 
     Jugador** jugadores; // arreglo de punteros a Jugador
-    int numJugadores;    // 1..4
+    int numJugadores;    // 1 a 4
 
     Tablero* tablero;
     Dado dado;
 
-    int jugadorActual;   // indice 0..numJugadores-1
+    int jugadorActual;   // indice 0 a numJugadores-1
 
-    int calcularNumDados(int fila, int col);
+
     bool moverJugadorUnaCasilla(int indiceJugador, int dirFila, int dirCol);
     void aplicarCasillaEspecial(int indiceJugador);
 

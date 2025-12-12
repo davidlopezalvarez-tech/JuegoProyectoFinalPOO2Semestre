@@ -6,20 +6,20 @@ using namespace std;
 Juego::Juego(int dificultad, int numJugadores) {
     this->dificultad = dificultad;
 
-    if (numJugadores < 1) numJugadores = 1;
-    if (numJugadores > 4) numJugadores = 4;
+    if (numJugadores < 1) numJugadores = 1;  //min jugadoras
+    if (numJugadores > 4) numJugadores = 4; //max jugadores
     this->numJugadores = numJugadores;
 
     jugadores = new Jugador*[this->numJugadores];
 
-    // Tamaño de tablero y PV inicial segun dificultad.
-    if (dificultad == 1) {        // Facil
+    // Tamaño de tablero y vida inicial segun dificultad.
+    if (dificultad == 1) {        // facil
         tamanoTablero = 15;
         pvInicial = 15;
-    } else if (dificultad == 2) { // Medio
+    } else if (dificultad == 2) { // medio
         tamanoTablero = 23;
         pvInicial = 23;
-    } else {                      // Dificil
+    } else {                      // dificil
         tamanoTablero = 31;
         pvInicial = 31;
     }
@@ -28,17 +28,29 @@ Juego::Juego(int dificultad, int numJugadores) {
     for (int i = 0; i < this->numJugadores; i++) {
         jugadores[i] = new Jugador(i + 1, pvInicial, 0, 0);
     }
-
+                                                    //agrega el numero de jugadores
     tablero = new Tablero(tamanoTablero, jugadores, this->numJugadores);
     jugadorActual = 0;
 }
 
-int Juego::getDificultad()    { return dificultad; }
-int Juego::getPVInicial()     { return pvInicial; }
-int Juego::getNumJugadores()  { return numJugadores; }
-int Juego::getJugadorActual() { return jugadorActual; }
-Jugador** Juego::getJugadores(){ return jugadores; }
-Tablero* Juego::getTablero()  { return tablero; }
+int Juego::getDificultad() {
+    return dificultad;
+}
+int Juego::getPVInicial() {
+    return pvInicial;
+}
+int Juego::getNumJugadores() {
+    return numJugadores;
+}
+int Juego::getJugadorActual() {
+    return jugadorActual;
+}
+Jugador** Juego::getJugadores() {
+    return jugadores;
+}
+Tablero* Juego::getTablero() {
+    return tablero;
+}
 
 void Juego::iniciarPartida() {
     // 8% de casillas especiales (rango 6–10%).
@@ -68,16 +80,6 @@ void Juego::mostrarEstado() {
     }
 }
 
-// Se mantiene por si lo requiere el enunciado, aunque ya no controla las direcciones.
-int Juego::calcularNumDados(int fila, int col) {
-    if (tablero->estaEnEsquina(fila, col)) {
-        return 2;
-    } else if (tablero->estaEnLimite(fila, col)) {
-        return 3;
-    } else {
-        return 4;
-    }
-}
 
 // Mueve una sola casilla en la direccion indicada y descuenta 1 PV.
 bool Juego::moverJugadorUnaCasilla(int indiceJugador, int dirFila, int dirCol) {
@@ -187,9 +189,13 @@ void Juego::turnoJugador() {
     if (j->estaEliminado()) {
         cout << "Jugador " << j->getId()
              << " esta eliminado. Se salta su turno.\n";
-        jugadorActual = (jugadorActual + 1) % numJugadores;
+        jugadorActual = jugadorActual + 1;
+        if (jugadorActual >= numJugadores) {
+            jugadorActual = 0;
+        }
         return;
     }
+
 
     int fila = j->getFila();
     int col  = j->getColumna();
@@ -266,9 +272,13 @@ void Juego::turnoJugador() {
 
     if (cuentaValidas == 0) {
         cout << "No hay direcciones validas. El jugador pierde el turno.\n";
-        jugadorActual = (jugadorActual + 1) % numJugadores;
+        jugadorActual = jugadorActual + 1;
+        if (jugadorActual >= numJugadores) {
+            jugadorActual = 0;
+        }
         return;
     }
+
 
     int eleccion = ultimaValida;
 
@@ -284,9 +294,13 @@ void Juego::turnoJugador() {
         cin >> eleccion;
         if (eleccion < 0 || eleccion >= 4 || !valida[eleccion]) {
             cout << "Opcion invalida, se anula el turno.\n";
-            jugadorActual = (jugadorActual + 1) % numJugadores;
+            jugadorActual = jugadorActual + 1;
+            if (jugadorActual >= numJugadores) {
+                jugadorActual = 0;
+            }
             return;
         }
+
     } else {
         cout << "Solo hay una direccion valida: "
              << nombre[ultimaValida]
@@ -302,6 +316,10 @@ void Juego::turnoJugador() {
     tablero->dibujarTablero();
     mostrarEstado();
 
-    // Pasar al siguiente jugador en orden fijo.
-    jugadorActual = (jugadorActual + 1) % numJugadores;
+    // Pasar al siguiente jugador
+    jugadorActual = jugadorActual + 1;
+    if (jugadorActual >= numJugadores) {
+        jugadorActual = 0;
+    }
+
 }

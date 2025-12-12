@@ -33,7 +33,6 @@ public:
     bool estaEnEsquina(int fila, int columna);
     bool meta(int fila, int columna);         // casilla central
 
-    // NUEVO: para que GestorPartida pueda reconstruir casillas al cargar
     void setCasilla(int fila, int columna, Casilla* nuevaCasilla);
 };
 

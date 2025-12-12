@@ -4,7 +4,7 @@
 // Tablero.cpp
 #include "Tablero.h"
 #include <iostream>
-#include <cstdlib>   // rand
+   // rand
 #include <ctime>     // time
 
 using namespace std;
@@ -15,15 +15,15 @@ Tablero::Tablero(int tamano, Jugador** jugadores, int numJugadores) {
     this->lugarJugador = jugadores;
     numEspeciales = 0;
 
-    // inicializar semilla para rand (si no lo hace otra clase)
-    std::srand(std::time(nullptr));
+    // inicializar punto de inicio de rand
+    srand(time(nullptr));
 
-    // Reservar matriz [tamano][tamano] de punteros a Casilla
+    // crear matriz [tamano][tamano] de punteros a Casilla (creacion de casillas en tablero)
     tablero = new Casilla**[tamano];
     for (int i = 0; i < tamano; i++) {
         tablero[i] = new Casilla*[tamano];
         for (int j = 0; j < tamano; j++) {
-            tablero[i][j] = new CasillaNormal(i, j); // todo normal al inicio
+            tablero[i][j] = new CasillaNormal(i, j);
         }
     }
 }
@@ -39,16 +39,16 @@ Casilla* Tablero::getCasilla(int fila, int columna) {
     return tablero[fila][columna];
 }
 
+//Verifica una posicion válida
 bool Tablero::validarPosicion(int fila, int columna) {
-    return fila >= 0 && fila < tamano &&
-           columna >= 0 && columna < tamano;
+    return fila >= 0 && fila < tamano && columna >= 0 && columna < tamano;
 }
 
+//verifica los limites de el tablero
 bool Tablero::estaEnLimite(int fila, int columna) {
-    return fila == 0 || fila == tamano - 1 ||
-           columna == 0 || columna == tamano - 1;
+    return fila == 0 || fila == tamano - 1 ||columna == 0 || columna == tamano - 1;
 }
-
+//verifica las esquinas
 bool Tablero::estaEnEsquina(int fila, int columna) {
     bool arribaIzq  = (fila == 0 && columna == 0);
     bool arribaDer  = (fila == 0 && columna == tamano - 1);
@@ -97,7 +97,8 @@ void Tablero::colocarJugadores() {
     int esquinasFila[4]    = {0, 0, tamano - 1, tamano - 1};
     int esquinasColumna[4] = {0, tamano - 1, tamano - 1, 0};
 
-    // Desordenar las esquinas de forma aleatoria (Fisher–Yates sencillo)
+    // Desordenar las esquinas de forma aleatoria  (esto es un codigo para poner
+    // los jugadores en esquinas aleatorias)
     for (int i = 3; i > 0; i--) {
         int j = rand() % (i + 1);
         int tmpF = esquinasFila[i];
@@ -122,7 +123,7 @@ void Tablero::colocarJugadores() {
         }
     }
 }
-
+// valida una posicion valida del tablero
 void Tablero::setCasilla(int fila, int columna, Casilla* nuevaCasilla) {
     if (!validarPosicion(fila, columna)) return;
     delete tablero[fila][columna];
@@ -130,7 +131,7 @@ void Tablero::setCasilla(int fila, int columna, Casilla* nuevaCasilla) {
 }
 
 void Tablero::dibujarTablero() {
-    // matriz temporal de chars
+    // matriz temporal vacía, sin meta, especiales ni nada
     char** vista = new char*[tamano];
     for (int i = 0; i < tamano; i++) {
         vista[i] = new char[tamano];
@@ -146,6 +147,9 @@ void Tablero::dibujarTablero() {
     // Casillas especiales
     for (int i = 0; i < tamano; i++) {
         for (int j = 0; j < tamano; j++) {
+            // dynamic_cast se usa en proyectos con herencia y polimorfismo
+            // esto valida el tipo de casilla sin generar cambios al proyecto
+            //esto evita crasheos y permite un correcto funcionamiento de casillanormal y especial
             CasillaEspecial* ce = dynamic_cast<CasillaEspecial*>(tablero[i][j]);
             if (ce != nullptr) {
                 if (!ce->getConocida()) {
@@ -175,12 +179,13 @@ void Tablero::dibujarTablero() {
             int c = lugarJugador[i]->getColumna();
             if (validarPosicion(f, c)) {
                 char simbolo = '1' + i; // '1','2','3','4'
-                vista[f][c] = simbolo;
+                vista[f][c] = simbolo;//recordemos que vista era la matriz inicial vacía
+                //esto la va llenando con los caracteres en la posición
             }
         }
     }
 
-    // Mostrar en consola con llaves
+    // vista del tablero
     cout << "\nTablero:\n";
     for (int i = 0; i < tamano; i++) {
         for (int j = 0; j < tamano; j++) {
